@@ -107,7 +107,7 @@ def run_payload_process():
 
 def run_recording_process():
     connection_id = 1
-    recorder = RecordingWriter(f"{recording_name}.trr", False, "ZED test at home")
+    recorder = RecordingWriter(f"recordings/{recording_name}.trr", False, "ZED test at home")
 
     # Write introduction message
     payload = struct.pack("<Q", floor(time.time()*1000))
@@ -194,19 +194,3 @@ zed.close()
 # Close
 payload_process.join()
 recording_process.join()
-
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Run Multi-Agent 3D Mapping",
-        formatter_class=CustomArgParseFormatter,
-    )
-
-    parser.add_argument(
-        "--rec_dir",
-        default="data/recordings/",
-        metavar="recording_directory",
-        type=str,
-        help="recordings directory",
-    )
