@@ -1,0 +1,4 @@
+/recordings/*
+!/recordings/.gitkeep
+*.pyc
+**/__pycache__
