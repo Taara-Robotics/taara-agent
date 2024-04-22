@@ -5,6 +5,7 @@ import cv2
 import gzip
 import numpy as np
 import multiprocessing as mp
+import argparse
 from math import floor
 from queue import Queue, Full, Empty
 from scipy.spatial.transform import Rotation
@@ -16,7 +17,34 @@ from .introduction_message import IntroductionMessage
 from .frame_message import FrameMessage
 from .fps_counter import FpsCounter
 
+# Parse args
+parser = argparse.ArgumentParser(
+    description="write Taara recording to .trr file"
+)
 
+parser.add_argument(
+    "--desc",
+    default="",
+    metavar="recording_description",
+    type=str,
+    help="recordings description in snake_case that will be added to the file metadata",
+)
+
+parser.add_argument(
+    "--name",
+    default=argparse.SUPPRESS,
+    metavar="output_name",
+    type=str,
+    help="recordings output name. If not specified then will be generated automatically",
+)
+
+args = parser.parse_args()
+
+if not "name" in args:
+    args.name = str(round(time.time()))
+
+if not "desc" in args:
+    args.desc = ""
 
 # Create a ZED camera object
 zed = sl.Camera()
@@ -62,7 +90,7 @@ depth_range_min, depth_range_max = (0.3, 10)
 
 # Generate TRR
 start_time = time.time()
-recording_name = f'zed_{init_params.camera_resolution}'
+recording_name = f'zed_{args.name}'
 
 # Write frame messages
 i = 0
@@ -71,6 +99,7 @@ fps_counter = FpsCounter()
 zed_pose = sl.Pose()
 zed_translation = sl.Translation()
 zed_orientation = sl.Orientation()
+sensors_data = sl.SensorsData()
 color_mat = sl.Mat()
 depth_mat = sl.Mat()
 
@@ -107,7 +136,7 @@ def run_payload_process():
 
 def run_recording_process():
     connection_id = 1
-    recorder = RecordingWriter(f"recordings/{recording_name}.trr", False, "ZED test at home")
+    recorder = RecordingWriter(f"recordings/{recording_name}.trr", False, args.desc)
 
     # Write introduction message
     payload = struct.pack("<Q", floor(time.time()*1000))
@@ -155,17 +184,23 @@ while True:
         
         # Update frame time
         frame_time = floor((time.time() - start_time)*1000)
+
+        # Get IMU pose
+        zed.get_sensors_data(sensors_data, sl.TIME_REFERENCE.IMAGE)
+        imu_pose = sensors_data.get_imu_data().get_pose()
         
         # Get the pose of the left eye of the camera with reference to the world frame
-        zed.get_position(zed_pose, sl.REFERENCE_FRAME.WORLD)
+        # zed.get_position(zed_pose, sl.REFERENCE_FRAME.WORLD)
 
         # Convert translation from mm to meters
-        translation = zed_pose.get_translation(zed_translation).get() / 1000
+        translation = imu_pose.get_translation().get() / 1000
+        # translation = zed_pose.get_translation(zed_translation).get() / 1000
         
         # Display the orientation quaternion
-        quaternion = zed_pose.get_orientation(zed_orientation).get()
+        # quaternion = zed_pose.get_orientation(zed_orientation).get()
+        quaternion = imu_pose.get_orientation().get()
         eulers = Rotation.from_quat(quaternion).as_euler("xyz", degrees=True)
-        # print(eulers, translation)
+        print(eulers, translation)
         
         # Retrieve left color image
         zed.retrieve_image(color_mat, sl.VIEW.LEFT)
