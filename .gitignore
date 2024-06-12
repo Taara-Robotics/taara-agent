@@ -2,3 +2,7 @@
 !/recordings/.gitkeep
 *.pyc
 **/__pycache__
+.venv/
+
+# Orbbec SDK log file
+Log/OrbbecSDK.log.txt
